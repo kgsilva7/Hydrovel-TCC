@@ -1,0 +1,62 @@
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+        monospace;
+}
+
+/* Reset básico */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* Remover margens e padding padrão */
+body, h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd {
+    margin: 0;
+}
+
+/* Remover list-style */
+ul, ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Remover decoração de links */
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Botões sem estilo padrão */
+button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* Inputs sem estilo padrão */
+input, textarea, select {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+/* Imagens responsivas */
+img {
+    max-width: 100%;
+    display: block;
+}
+
+/* Foco acessível */
+:focus-visible {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+}

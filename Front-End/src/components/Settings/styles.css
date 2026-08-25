@@ -1,0 +1,604 @@
+/* Settings Page Styles */
+.settings-page {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+}
+
+.settings-header h1 {
+    font-size: 28px;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+.settings-subtitle {
+    color: #6c757d;
+    margin: 4px 0 0 0;
+    font-size: 14px;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.settings-action-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.reset-btn {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.reset-btn:hover {
+    background: #e0e0e0;
+}
+
+.settings-save-btn {
+    background: linear-gradient(135deg, #1976d2, #1565c0);
+    color: white;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+}
+
+.settings-save-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+}
+
+.settings-save-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.settings-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.settings-message.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.settings-message.error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+.settings-tabs {
+    display: flex;
+    gap: 4px;
+    background: white;
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow-x: auto;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.tab-btn.active {
+    background: #1976d2;
+    color: white;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+}
+
+.settings-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.settings-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.settings-card-header {
+    padding: 16px 20px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.settings-card-header h2 {
+    font-size: 16px;
+    margin: 0;
+    color: #1a1a2e;
+}
+
+.settings-card-body {
+    padding: 20px;
+}
+
+.settings-description {
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+/* Toggle Switch */
+.settings-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.settings-toggle:last-child {
+    border-bottom: none;
+}
+
+.toggle-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-icon {
+    font-size: 20px;
+    color: #1976d2;
+}
+
+.toggle-info label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    display: block;
+}
+
+.toggle-description {
+    font-size: 12px;
+    color: #999;
+    margin: 0;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ccc;
+    transition: 0.3s;
+    border-radius: 26px;
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: #1976d2;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(22px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Thresholds */
+.thresholds-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.threshold-group {
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.threshold-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.threshold-icon {
+    font-size: 20px;
+}
+
+.threshold-header h4 {
+    font-size: 14px;
+    color: #333;
+    margin: 0;
+}
+
+.threshold-inputs {
+    display: flex;
+    gap: 12px;
+}
+
+.threshold-input {
+    flex: 1;
+}
+
+.threshold-input label {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.threshold-input input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.threshold-input input:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.threshold-indicator {
+    margin-top: 8px;
+}
+
+.indicator-bar {
+    width: 100%;
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.indicator-fill {
+    height: 100%;
+    border-radius: 3px;
+}
+
+.indicator-label {
+    display: block;
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+    text-align: center;
+}
+
+/* Profile Form */
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.form-group input.disabled-input {
+    background: #f5f5f5;
+    cursor: not-allowed;
+    color: #999;
+}
+
+.field-hint {
+    font-size: 12px;
+    color: #999;
+}
+
+.form-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0;
+}
+
+.form-divider hr {
+    flex: 1;
+    border: none;
+    border-top: 1px solid #e0e0e0;
+}
+
+.form-divider span {
+    font-size: 14px;
+    color: #999;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.profile-update-btn {
+    padding: 12px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.profile-update-btn:hover:not(:disabled) {
+    background: #43a047;
+    transform: translateY(-2px);
+}
+
+.profile-update-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Profile Info */
+.profile-info {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e9ecef;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+}
+
+.info-item {
+    padding: 8px 0;
+}
+
+.info-item label {
+    font-size: 12px;
+    color: #999;
+    display: block;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-item p {
+    font-size: 14px;
+    color: #333;
+    margin: 0;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* Settings Info Box */
+.settings-info-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.settings-info-box h4 {
+    font-size: 14px;
+    color: #333;
+    margin: 0;
+}
+
+.settings-info-box p {
+    font-size: 12px;
+    color: #999;
+    margin: 0;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .settings-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .settings-actions {
+        width: 100%;
+    }
+
+    .settings-action-btn,
+    .settings-save-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .settings-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-btn {
+        flex: 1;
+        justify-content: center;
+        min-width: 80px;
+    }
+
+    .thresholds-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-info {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .settings-toggle {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .toggle-info {
+        width: 100%;
+    }
+
+    .toggle-switch {
+        align-self: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-header h1 {
+        font-size: 22px;
+    }
+
+    .settings-card-header h2 {
+        font-size: 14px;
+    }
+
+    .settings-card-body {
+        padding: 16px;
+    }
+
+    .threshold-inputs {
+        flex-direction: column;
+    }
+
+    .settings-actions {
+        flex-direction: column;
+    }
+
+    .settings-action-btn,
+    .settings-save-btn {
+        width: 100%;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
