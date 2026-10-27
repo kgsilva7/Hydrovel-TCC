@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const SensorController = require('../controllers/sensorController');
+const SensorController = require('../controllers/sensorController'); // singular
 const auth = require('../middleware/auth');
 
-// Rotas públicas (para ESP32)
+// Rota pública (ESP32)
 router.post('/data', SensorController.receiveSensorData);
 
 // Rotas autenticadas
