@@ -7,11 +7,16 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/hydrov
 
 const connectMongoDB = async () => {
     try {
-        await mongoose.connect(MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        await mongoose.connect(MONGODB_URI);
         console.log('✅ Conectado ao MongoDB');
+
+        mongoose.connection.on('error', (err) => {
+            console.error('❌ MongoDB erro pós-conexão:', err);
+        });
+
+        mongoose.connection.on('disconnected', () => {
+            console.warn('⚠️ MongoDB desconectado');
+        });
     } catch (error) {
         console.error('❌ Erro ao conectar ao MongoDB:', error);
         process.exit(1);
