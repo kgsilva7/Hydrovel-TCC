@@ -1,124 +1,171 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
-const socketIo = require('socket.io');
+const { Server } = require('socket.io');
 const dotenv = require('dotenv');
-const cron = require('node-cron');
 
-// Configurações
-const { initDatabase } = require('./config/database');
+dotenv.config();
+
+const { initDatabase, testConnection } = require('./config/database');
 const { connectMongoDB } = require('./config/mongodb');
-const { connectMQTT } = require('./config/mqtt');
-const NotificationService = require('./services/notificationService');
+const { connectMQTT, onMessage, disconnectMQTT, MQTT_TOPICS } = require('./config/mqtt');
+const AnomalyDetectionService = require('./services/anomalyDetection');
+const SensorData = require('./models/SensorData');
 
-// Rotas
 const sensorRoutes = require('./routes/sensorRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const userRoutes = require('./routes/userRoutes');
 
-dotenv.config();
-
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
+const io = new Server(server, {
     cors: {
         origin: process.env.CLIENT_URL || 'http://localhost:3000',
-        methods: ['GET', 'POST']
+        methods: ['GET', 'POST', 'PUT', 'DELETE']
     }
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// ======== Middlewares globais ========
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000' }));
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Configurar Socket.IO global
+// Rate limit: protege rotas públicas
+const limiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.use('/api/', limiter);
+
+// ======== Socket.IO global ========
 global.io = io;
 
-// Rotas
+io.on('connection', (socket) => {
+    console.log('🔌 Novo cliente conectado:', socket.id);
+
+    // Aceita tanto 'authenticate' com string quanto com objeto { userId }
+    const joinRoom = (payload) => {
+        const userId = typeof payload === 'object' ? payload?.userId : payload;
+        if (!userId) return;
+        socket.join(`user_${userId}`);
+        console.log(`👤 Usuário ${userId} autenticado no socket`);
+    };
+
+    socket.on('authenticate', joinRoom);
+    socket.on('join_room', ({ room }) => room && socket.join(room));
+    socket.on('leave_room', ({ room }) => room && socket.leave(room));
+
+    socket.on('disconnect', () => {
+        console.log('🔌 Cliente desconectado:', socket.id);
+    });
+});
+
+// ======== Rotas ========
 app.use('/api/sensors', sensorRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/users', userRoutes);
 
-// Rota de health check
 app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    res.json({
+        status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });
 });
 
-// Socket.IO
-io.on('connection', (socket) => {
-    console.log('Novo cliente conectado:', socket.id);
+// 404 para rotas desconhecidas
+app.use((req, res) => {
+    res.status(404).json({ error: 'Rota não encontrada' });
+});
 
-    socket.on('authenticate', (userId) => {
-        socket.join(`user_${userId}`);
-        console.log(`Usuário ${userId} autenticado no socket`);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Cliente desconectado:', socket.id);
+// Handler global de erros (precisa dos 4 parâmetros)
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    console.error('💥 Erro não tratado:', err);
+    res.status(err.status || 500).json({
+        error: err.message || 'Erro interno do servidor'
     });
 });
 
-// Função para processar dados MQTT
+// ======== Integração MQTT ========
 const setupMQTT = () => {
-    const mqttClient = connectMQTT();
-    
-    mqttClient.on('message', async (topic, message) => {
-        if (topic === 'hydrovel/sensor/data') {
-            try {
-                const data = JSON.parse(message.toString());
-                // Processar dados recebidos via MQTT
-                // Isso complementa o endpoint HTTP
-                console.log('Dados recebidos via MQTT:', data);
-            } catch (error) {
-                console.error('Erro ao processar mensagem MQTT:', error);
+    connectMQTT();
+
+    onMessage(async (topic, rawMessage) => {
+        if (topic !== MQTT_TOPICS.SENSOR_DATA) return;
+        try {
+            const data = JSON.parse(rawMessage.toString());
+            const { user_id, sensor_type, value, metadata } = data;
+
+            if (!user_id || !sensor_type || value === undefined) {
+                console.warn('⚠️ Mensagem MQTT inválida:', data);
+                return;
             }
+
+            await SensorData.create({
+                user_id,
+                sensor_type,
+                value: Number(value),
+                metadata: metadata || {}
+            });
+
+            await AnomalyDetectionService.checkAnomalies(
+                user_id,
+                sensor_type,
+                Number(value),
+                new Date()
+            );
+
+            if (global.io) {
+                global.io.to(`user_${user_id}`).emit('sensor_update', {
+                    sensor_type,
+                    value: Number(value),
+                    timestamp: new Date()
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao processar mensagem MQTT:', error.message);
         }
     });
 };
 
-// Tarefas agendadas
-const setupCronJobs = () => {
-    // Relatório diário às 8:00
-    cron.schedule('0 8 * * *', async () => {
-        console.log('📊 Enviando relatórios diários...');
-        // Implementar lógica de relatórios
-    });
-
-    // Verificação de sistema às 2:00
-    cron.schedule('0 2 * * *', async () => {
-        console.log('🔍 Verificando sistema...');
-        // Implementar verificações periódicas
-    });
-};
-
-// Inicialização
+// ======== Inicialização ========
 const startServer = async () => {
     try {
-        // Inicializar bancos de dados
+        await testConnection();
         await initDatabase();
         await connectMongoDB();
-        
-        // Configurar MQTT
         setupMQTT();
-        
-        // Configurar tarefas agendadas
-        setupCronJobs();
 
         const PORT = process.env.PORT || 5000;
         server.listen(PORT, () => {
             console.log(`🚀 Servidor rodando na porta ${PORT}`);
-            console.log(`📊 Dashboard disponível em http://localhost:${PORT}/api/health`);
+            console.log(`📊 Health check: http://localhost:${PORT}/health`);
         });
     } catch (error) {
         console.error('❌ Erro ao iniciar servidor:', error);
         process.exit(1);
     }
 };
+
+// Encerramento gracioso
+const shutdown = async (signal) => {
+    console.log(`\n🛑 ${signal} recebido, encerrando...`);
+    disconnectMQTT();
+    server.close(() => {
+        console.log('✅ Servidor encerrado');
+        process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 startServer();
 
