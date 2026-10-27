@@ -33,13 +33,15 @@ const alertSchema = new mongoose.Schema({
         default: Date.now
     },
     resolved_at: {
-        type: Date
+        type: Date,
+        default: null
     },
     resolved_by: {
-        type: Number // user_id
+        type: Number,
+        default: null
     }
 }, {
-    timestamps: true
+    timestamps: false
 });
 
 alertSchema.index({ user_id: 1, read: 1, created_at: -1 });
