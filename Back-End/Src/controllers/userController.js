@@ -3,55 +3,59 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const signToken = (user) =>
+    jwt.sign(
+        { id: user.id, email: user.email },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '7d' }
+    );
+
 class UserController {
     async register(req, res) {
         try {
             const { name, email, password, phone } = req.body;
 
-            // Verificar se usuário já existe
+            if (!name || !email || !password) {
+                return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+            }
+            if (password.length < 6) {
+                return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+            }
+
             const [existing] = await pool.execute(
-                'SELECT * FROM users WHERE email = ?',
+                'SELECT id FROM users WHERE email = ?',
                 [email]
             );
-
             if (existing.length > 0) {
                 return res.status(400).json({ error: 'Email já registrado' });
             }
 
-            // Hash da senha
             const hashedPassword = await bcrypt.hash(password, 10);
 
-            // Salvar no MySQL
             const [result] = await pool.execute(
                 'INSERT INTO users (name, email, password, phone) VALUES (?, ?, ?, ?)',
-                [name, email, hashedPassword, phone]
+                [name, email, hashedPassword, phone || null]
             );
 
-            // Salvar no MongoDB
-            const user = new User({
+            // Cria doc no MongoDB com settings default
+            await User.create({
                 mysql_id: result.insertId,
                 name,
                 email,
-                phone
+                phone: phone || null,
+                settings: {
+                    alert_notifications: { email: true, sms: false, push: true },
+                    thresholds: User.DEFAULT_THRESHOLDS,
+                    system: { auto_resolve: false, daily_report: true, maintenance_mode: false }
+                }
             });
-            await user.save();
 
-            // Gerar token
-            const token = jwt.sign(
-                { id: result.insertId, email },
-                process.env.JWT_SECRET || 'secret',
-                { expiresIn: '7d' }
-            );
+            const token = signToken({ id: result.insertId, email });
 
             res.status(201).json({
                 message: 'Usuário registrado com sucesso',
                 token,
-                user: {
-                    id: result.insertId,
-                    name,
-                    email,
-                    phone
-                }
+                user: { id: result.insertId, name, email, phone }
             });
         } catch (error) {
             console.error('Erro ao registrar usuário:', error);
@@ -62,37 +66,31 @@ class UserController {
     async login(req, res) {
         try {
             const { email, password } = req.body;
+            if (!email || !password) {
+                return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+            }
 
-            // Buscar usuário no MySQL
             const [users] = await pool.execute(
                 'SELECT * FROM users WHERE email = ?',
                 [email]
             );
-
             if (users.length === 0) {
                 return res.status(401).json({ error: 'Credenciais inválidas' });
             }
 
             const user = users[0];
-
-            // Verificar senha
             const validPassword = await bcrypt.compare(password, user.password);
             if (!validPassword) {
                 return res.status(401).json({ error: 'Credenciais inválidas' });
             }
 
-            // Atualizar último login no MongoDB
             await User.findOneAndUpdate(
                 { mysql_id: user.id },
-                { last_login: new Date() }
+                { last_login: new Date() },
+                { upsert: false }
             );
 
-            // Gerar token
-            const token = jwt.sign(
-                { id: user.id, email: user.email },
-                process.env.JWT_SECRET || 'secret',
-                { expiresIn: '7d' }
-            );
+            const token = signToken(user);
 
             res.json({
                 message: 'Login realizado com sucesso',
@@ -101,7 +99,8 @@ class UserController {
                     id: user.id,
                     name: user.name,
                     email: user.email,
-                    phone: user.phone
+                    phone: user.phone,
+                    created_at: user.created_at
                 }
             });
         } catch (error) {
@@ -110,16 +109,111 @@ class UserController {
         }
     }
 
+    async verifyToken(req, res) {
+        try {
+            const [users] = await pool.execute(
+                'SELECT id, name, email, phone, created_at FROM users WHERE id = ?',
+                [req.user.id]
+            );
+            if (users.length === 0) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
+            res.json({ user: users[0] });
+        } catch (error) {
+            console.error('Erro ao verificar token:', error);
+            res.status(500).json({ error: 'Erro interno do servidor' });
+        }
+    }
+
+    async updateUser(req, res) {
+        try {
+            const { userId } = req.params;
+            const { name, phone, password, currentPassword } = req.body;
+
+            const [users] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
+            if (users.length === 0) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
+            const user = users[0];
+
+            const updates = [];
+            const values = [];
+
+            if (name && name.trim()) {
+                updates.push('name = ?');
+                values.push(name.trim());
+            }
+            if (phone !== undefined) {
+                updates.push('phone = ?');
+                values.push(phone || null);
+            }
+
+            if (password) {
+                if (!currentPassword) {
+                    return res.status(400).json({ error: 'Senha atual obrigatória para trocar senha' });
+                }
+                const ok = await bcrypt.compare(currentPassword, user.password);
+                if (!ok) {
+                    return res.status(400).json({ error: 'Senha atual incorreta' });
+                }
+                if (password.length < 6) {
+                    return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
+                }
+                updates.push('password = ?');
+                values.push(await bcrypt.hash(password, 10));
+            }
+
+            if (updates.length === 0) {
+                return res.status(400).json({ error: 'Nada para atualizar' });
+            }
+
+            values.push(userId);
+            await pool.execute(
+                `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+                values
+            );
+
+            // Atualiza espelho no Mongo
+            const mongoUpdates = {};
+            if (name) mongoUpdates.name = name.trim();
+            if (phone !== undefined) mongoUpdates.phone = phone || null;
+            if (Object.keys(mongoUpdates).length > 0) {
+                await User.updateOne({ mysql_id: parseInt(userId, 10) }, mongoUpdates);
+            }
+
+            res.json({ message: 'Perfil atualizado com sucesso' });
+        } catch (error) {
+            console.error('Erro ao atualizar usuário:', error);
+            res.status(500).json({ error: 'Erro interno do servidor' });
+        }
+    }
+
     async getUserSettings(req, res) {
         try {
             const { userId } = req.params;
 
-            const user = await User.findOne({ mysql_id: parseInt(userId) });
+            let user = await User.findOne({ mysql_id: parseInt(userId, 10) });
             if (!user) {
-                return res.status(404).json({ error: 'Usuário não encontrado' });
+                // Se não existir no Mongo, cria com defaults
+                const [rows] = await pool.execute(
+                    'SELECT id, name, email, phone FROM users WHERE id = ?',
+                    [userId]
+                );
+                if (rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+                const u = rows[0];
+                user = await User.create({
+                    mysql_id: u.id,
+                    name: u.name,
+                    email: u.email,
+                    phone: u.phone,
+                    settings: {
+                        alert_notifications: { email: true, sms: false, push: true },
+                        thresholds: User.DEFAULT_THRESHOLDS,
+                        system: { auto_resolve: false, daily_report: true, maintenance_mode: false }
+                    }
+                });
             }
 
-            // Buscar sensores do usuário
             const [sensors] = await pool.execute(
                 'SELECT * FROM sensors WHERE user_id = ?',
                 [userId]
@@ -127,7 +221,7 @@ class UserController {
 
             res.json({
                 settings: user.settings || {},
-                sensors: sensors
+                sensors
             });
         } catch (error) {
             console.error('Erro ao buscar configurações:', error);
@@ -140,15 +234,15 @@ class UserController {
             const { userId } = req.params;
             const { settings } = req.body;
 
-            const user = await User.findOneAndUpdate(
-                { mysql_id: parseInt(userId) },
-                { settings },
-                { new: true }
-            );
-
-            if (!user) {
-                return res.status(404).json({ error: 'Usuário não encontrado' });
+            if (!settings || typeof settings !== 'object') {
+                return res.status(400).json({ error: 'Settings inválido' });
             }
+
+            const user = await User.findOneAndUpdate(
+                { mysql_id: parseInt(userId, 10) },
+                { $set: { settings } },
+                { new: true, upsert: true, setDefaultsOnInsert: true }
+            );
 
             res.json({
                 message: 'Configurações atualizadas com sucesso',
