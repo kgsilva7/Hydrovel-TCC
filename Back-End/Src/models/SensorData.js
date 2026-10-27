@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const sensorDataSchema = new mongoose.Schema({
     user_id: {
         type: Number,
-        required: true
+        required: true,
+        index: true
     },
     sensor_type: {
         type: String,
@@ -25,11 +26,10 @@ const sensorDataSchema = new mongoose.Schema({
         max_threshold: Number
     }
 }, {
-    timestamps: true,
-    capped: { size: 1024 * 1024 * 100, max: 10000 }
+    timestamps: false // ← removido; era incompatível com capped
 });
 
-// Índice para consultas rápidas
+// Índice para consultas rápidas (TTL opcional comentado)
 sensorDataSchema.index({ user_id: 1, sensor_type: 1, timestamp: -1 });
 sensorDataSchema.index({ timestamp: -1 });
 
